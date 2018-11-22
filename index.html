@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+
+        <style>
+            table {
+                width: 100%;
+                height: 100%;
+
+            }
+            table.parseTable {
+                border: 1px solid #1C6EA4;
+                background-color: #ECECEC;
+                width: 100%;
+                text-align: left;
+                border-collapse: collapse;
+            }
+            table.parseTable td, table.parseTable th {
+                border: 1px solid #AAAAAA;
+                padding: 3px 3px;
+            }
+            table.parseTable tbody td {
+                font-size: 16px;
+                font-weight: bold;
+            }
+            table.parseTable tr:nth-child(even) {
+                background: #FAFAFA;
+            }
+            table.parseTable thead {
+                background: #5BA2EC;
+                border-bottom: 2px solid #444444;
+            }
+            table.parseTable thead th {
+                font-size: 20px;
+                font-weight: bold;
+                color: #FFFFFF;
+                border-left: 2px solid #D0E4F5;
+            }
+            table.parseTable thead th:first-child {
+                border-left: none;
+            }
+
+            .textAreaWrapper {
+                width: 100%;
+                height: 80vh;
+            }
+            textarea.textarea1 {
+                width: 100%;
+                height: 35%;
+            }
+            textarea {
+                width: 80%;
+                height: 80%;
+            }
+        </style>
+    </head>
+    <body>
+        <table>
+            <tr>
+                <td>
+                    <div>
+                        <label>Enter code here</label>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        <label>Parsed code here</label>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="textAreaWrapper">
+                        <textarea id="codePlaceholder" title="Enter code here"></textarea>
+                    </div>
+                </td>
+                <td>
+                    <div class="textAreaWrapper">
+                        <textarea class="textarea1" id="parsedCode" title="Parse code"></textarea>
+                       <table class ="parseTable"  id="parseTable" title="parse Table" >
+                           <thead>
+                            <tr>
+                                <th>Line</th>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Condition</th>
+                                <th>Value</th>
+                            </tr>
+                           </thead>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div>
+                        <button id="codeSubmissionButton">Parse code</button>
+                    </div>
+                </td>
+                <td>
+                </td>
+            </tr>
+        </table>
+
+        <script src="dist/bundle.js"></script>
+    </body>
+</html>
