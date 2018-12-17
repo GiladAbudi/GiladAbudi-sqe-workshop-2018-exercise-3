@@ -49,10 +49,24 @@
                 width: 100%;
                 height: 35%;
             }
-            textarea {
+
+            textarea.codePlaceholder {
                 width: 80%;
-                height: 80%;
+                height:80%;
             }
+            textarea.vectorinput {
+                width: 80%;
+                height: 10%;
+            }
+            mark.green {
+                background-color: #00ff12;
+                color: black;
+            }
+            mark.red {
+                background-color: #ff442a;
+                color: black;
+            }
+
         </style>
     </head>
     <body>
@@ -65,30 +79,30 @@
                 </td>
                 <td>
                     <div>
-                        <label>Parsed code here</label>
+                        <label><strong><u>Parsed code here:</u></strong></label>
                     </div>
                 </td>
             </tr>
             <tr>
                 <td>
                     <div class="textAreaWrapper">
-                        <textarea id="codePlaceholder" title="Enter code here"></textarea>
+
+                        <textarea class="codePlaceholder" id="codePlaceholder" title="Enter code here">
+let d=6;
+    function foo(x, y, z){
+    let a = x + 1;
+   if( a*2 + a *2  >6)
+                            return a*2;
+}
+
+                        </textarea>
+                        <textarea class="vectorinput" id="vectorinput" title="vector input">
+                            {"x":1,"y":2,"z":3}
+                        </textarea>
                     </div>
                 </td>
                 <td>
-                    <div class="textAreaWrapper">
-                        <textarea class="textarea1" id="parsedCode" title="Parse code"></textarea>
-                       <table class ="parseTable"  id="parseTable" title="parse Table" >
-                           <thead>
-                            <tr>
-                                <th>Line</th>
-                                <th>Type</th>
-                                <th>Name</th>
-                                <th>Condition</th>
-                                <th>Value</th>
-                            </tr>
-                           </thead>
-                        </table>
+                    <div class="textAreaWrapper" id="output">
                     </div>
                 </td>
             </tr>

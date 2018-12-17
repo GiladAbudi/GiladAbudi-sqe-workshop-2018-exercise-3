@@ -1,67 +1,104 @@
 import assert from 'assert';
-import {parseCode,parseJson,caseBlockStatement,caseFunctionDeclaration,caseWhileStatement,caseIfStatement,caseForStatement,caseAssignmentExpression,caseReturnStatement} from '../src/js/code-analyzer';
+import {
+    parseJson1,
+    checkIfArray,
+    getNumberInArray,
+    getNameofArray,
+    inputToMap,
+    parseCode,
+    outputString
+} from '../src/js/code-analyzer';
+
+import * as escodegen from 'escodegen';
 
 
 //** variables for the test functions : **
+let teststring1='function foo(x, y, z){' +
+    '    let a = x + 1;' +
+    '    let b = a + y;' +
+    '    let c = 0;' +
+    '    if (b < z) {' +
+    '        c = c + 5;' +
+    '        return x + y + z + c;' +
+    '    } else if (b < z * 2) {' +
+    '        c = c + x + 5;' +
+    '        return x + y + z + c;' +
+    '    } else {' +
+    '        c = c + z + 5;' +
+    '        return x + y + z + c;' +
+    '    }' +
+    '}';
 
-//caseBlockStatement
-let json1= parseCode('{ }').body[0];
-let arrjson1= [];
+let inputvector1='{"x":1,"y":2,"z":3}';
 
-//caseFunctionDeclaration
-let json2 = parseCode('function binarySearch(x,y){ }').body[0];
-let arrjson2 = [{name: 'binarySearch' , line: 1 ,type: 'FunctionDeclaration' ,value:'' ,condition:'' },
-    {name: 'x' , line: 1 ,type: 'VariableDeclarator' ,value:'' ,condition:'' },
-    {name: 'y' , line: 1 ,type: 'VariableDeclarator' ,value:'' ,condition:'' }];
+let res1='function foo(x, y, z) {\n' +
+    '    let a = x + 1;\n' +
+    '    let b = x + 1 + y;\n' +
+    '    let c = 0;\n' +
+    '    if (x + 1 + y < z) {\n' +
+    '        c = 0;\n' +
+    '        return x + y + z + 0 + 5;\n' +
+    '    } else if (x + 1 + y < z * 2) {\n' +
+    '        c = 0;\n' +
+    '        return x + y + z + 0 + x + 5;\n' +
+    '    } else {\n' +
+    '        c = 0;\n' +
+    '        return x + y + z + 0 + z + 5;\n' +
+    '    }\n' +
+    '}';
 
-//caseWhileStatement
-let json3 = parseCode('while(x[3]<=N){ }').body[0];
-let arrjson3 = [{name: '' , line: 1 ,type: 'WhileStatement' ,value:null ,condition:'x[3]<=N' }];
+let teststring2='function foo(x, y, z){' +
+    '    let a = x + 1;' +
+    '    let b = a + y;' +
+    '    let c = 0;    ' +
+    '    while (a < z) {' +
+    '        c = a + b;' +
+    '        z = c * 2;' +
+    '    }' +
+    '    return z;' +
+    '}';
+let inputvector2='{"x":1,"y":2,"z":3}';
 
-//caseIfStatement
-let json4 = parseCode('function iftest (x){ if( x>5 ) return 1; else if (x<5) return 0; else return 5; }').body[0].body.body[0];
-let arrjson4 = [{name: '' , line: 1 ,type: 'IfStatement' ,value:null ,condition:'x>5' },
-    {name: '' , line: 1 ,type: 'ReturnStatement' ,value:'1' ,condition:'' },
-    {name: '' , line: 1 ,type: 'elseIfStatement' ,value:null ,condition:'x<5' },
-    {name: '' , line: 1 ,type: 'ReturnStatement' ,value:'0' ,condition:'' },
-    {name: '' , line: 1 ,type: 'ReturnStatement' ,value:'5' ,condition:'' }];
+let res2='function foo(x, y, z) {\n' +
+    '    let a = x + 1;\n' +
+    '    let b = x + 1 + y;\n' +
+    '    let c = 0;\n' +
+    '    while (x + 1 < z) {\n' +
+    '        c = x + 1 + x + 1 + y;\n' +
+    '        z = (x + 1 + x + 1 + y) * 2;\n' +
+    '    }\n' +
+    '    return z;\n' +
+    '}';
 
-//caseForStatement
-let json5 = parseCode('for( let i= 1 ; i<=10 ; ++i){}').body[0];
-let arrjson5 = [{name: '' , line: 1 ,type: 'ForStatement' ,value:null ,condition:'i<=10' },
-    {name: 'i' , line: 1 ,type: 'AssignmentExpression' ,value:'1' ,condition:'' },
-    {name: 'i' , line: 1 ,type: 'AssignmentExpression' ,value:'++i' ,condition:'' }];
+let teststring3='let b=5;' +
+    'function foo(x, y, z){' +
+    '    let a;' +
+    '    a=5;' +
+    '    x[0] = 99;' +
+    '    if (a <= x[0]) {' +
+    '        return x + y + z + a;' +
+    '    }else if (a> x[0]){' +
+    '        return y;' +
+    '}' +
+    '}';
 
-let json5_2 = parseCode('for( let i= 0 ; i*2<=10*10 ; i=i+2){}').body[0];
-let arrjson5_2 = [{name: '' , line: 1 ,type: 'ForStatement' ,value:null ,condition:'i*2<=10*10' },
-    {name: 'i' , line: 1 ,type: 'AssignmentExpression' ,value:'0' ,condition:'' },
-    {name: 'i' , line: 1 ,type: 'AssignmentExpression' ,value:'i=i+2' ,condition:'' }];
+let inputvector3='{"x":[1,3],"y":2,"z":3}';
 
-//caseAssignmentExpression
-let json6 = parseCode('x=x+5').body[0].expression;
-let arrjson6 = [{name: 'x' , line: 1 ,type: 'AssignmentExpression' ,value:'x+5' ,condition:'' }];
-
-//caseReturnStatement
-let json7 = parseCode('function x () {\n' +
-    'return 7;\n' +
-    '}').body[0].body.body[0];
-let arrjson7 = [{name: '' , line: 2 ,type: 'ReturnStatement' ,value:'7' ,condition:'' }];
-
-let json8 = parseCode('function x (z) {\n' +
-    'return 7;\n' +
-    '}').body[0].body.body[0];
-let arrjson8 = [{name: '' , line: 2 ,type: 'ReturnStatement' ,value:'x+7*2' ,condition:'' }];
-
-describe('The javascript parser', () => {
-
-    it('is parsing an empty function correctly', () => {
-        assert.equal(
-            JSON.stringify(parseCode('')),
-            '{"type":"Program","body":[],"sourceType":"script","loc":{"start":{"line":0,"column":0},"end":{"line":0,"column":0}}}'
-        );
-    });
+let res3='let b=5;\n' +
+    'function foo(x, y, z){\n' +
+    '    let a;\n' +
+    '    a=5;\n' +
+    '    x[0] = 99;\n' +
+    '    if (5 <= x[0]) {\n' +
+    '        return x + y + z + 5;\n' +
+    '    }else if (5> x[0]){\n' +
+    '        return y;\n' +
+    '}\n' +
+    '}';
 
 
+
+describe('The javascript symbolic substitution', () => {
 
     it('is parsing a simple variable declaration correctly', () => {
         assert.equal(
@@ -70,85 +107,95 @@ describe('The javascript parser', () => {
         );
     });
 
-    it('function caseBlockStatement', () => {
-        assert.deepStrictEqual( caseBlockStatement(json1).toString() ,
-            arrjson1.toString());
-    });
-
-    it('function caseFunctionDeclaration ', () => {
-        assert.deepStrictEqual( caseFunctionDeclaration(json2).toString() ,
-            arrjson2.toString());
-    });
-
-    it('function caseWhileStatement ', () => {
-        assert.deepStrictEqual( caseWhileStatement(json3).toString() ,
-            arrjson3.toString());
+    it('function inputToMap 1', () => {
+        let mapInput={};mapInput['x']=1;mapInput['y']=2;mapInput['z']=3;
+        assert.equal(
+            inputToMap('{"x":1,"y":2,"z":3}'), mapInput.toString());
     });
 
 
-    it('function caseIfStatement ', () => {
-        assert.deepStrictEqual( caseIfStatement(json4).toString() ,
-            arrjson4.toString());
+    it('function inputToMap 2', () => {
+        let mapInput={};mapInput['x']=1;mapInput['y']=[2,3,4];mapInput['z']=3;
+        assert.deepStrictEqual(
+            inputToMap('{"x":1,"y":[2,3,4],"z":3}'), mapInput);
     });
 
-    it('function caseForStatement 1 ', () => {
-        assert.deepStrictEqual( caseForStatement(json5).toString() ,
-            arrjson5.toString());
+    it('function inputToMap 3', () => {
+        let mapInput={};mapInput['x']='string';mapInput['y']=[2,3,4];mapInput['z']=true;
+        assert.equal(
+            inputToMap('{"x":"string","y":[2,3,4],"z":true}'), mapInput.toString());
     });
 
-    it('function caseForStatement 2 ', () => {
-        assert.deepStrictEqual( caseForStatement(json5_2).toString() ,
-            arrjson5_2.toString());
+    it('function getNameOfArray 1', () => {
+        assert.equal(getNameofArray('myname[7]'), 'myname');
     });
 
-    it('function caseAssignmentExpression ', () => {
-        assert.deepStrictEqual( caseAssignmentExpression(json6).toString() ,
-            arrjson6.toString());
+    it('function getNumberInArray 1', () => {
+        assert.equal(getNumberInArray('myname[7]'), '7');
     });
 
-    it('function caseReturnStatement 1', () => {
-        assert.deepStrictEqual( caseReturnStatement(json7).toString() ,
-            arrjson7.toString());
+    it('function checkIfArray 1', () => {
+        assert.equal(checkIfArray('myname[7]'), true);
     });
 
-    it('function caseReturnStatement 2', () => {
-        assert.deepStrictEqual( caseReturnStatement(json8).toString() ,
-            arrjson8.toString());
+    it('function checkIfArray 2', () => {
+        assert.equal(checkIfArray('args'), false);
     });
 
-    it(' parseJson function', () => {
-        let arr1=[{name: 'binarySearch' , line: 1 ,type: 'FunctionDeclaration' ,value:'' ,condition:'' },
-            {name: 'x' , line: 1 ,type: 'VariableDeclarator' ,value:'' ,condition:'' },
-            {name: 'low' , line: 2 ,type: 'VariableDeclarator' ,value:null ,condition:'' }] ;
-
-        let input = parseCode('function binarySearch(x){\n' +
-            '    let low;\n' +
-            '}');
-
-        assert.deepStrictEqual( parseJson(input).toString() ,
-            arr1.toString());
+    it('function parseJson1 1', () => {
+        let sub1=parseJson1(parseCode(teststring1),inputvector1);
+        let sub2= escodegen.generate(sub1).replace(/;;/g, ';').replace(';)', ')').replace(';)', ')');
+        assert.equal(sub2.toString().replace(/\s/g, ''),res1.toString().replace(/\s/g, ''));
     });
 
-
-    it('is parsing a program - parseJson function ', () => {
-        let arr2=[{name: 'binarySearch' , line: 1 ,type: 'FunctionDeclaration' ,value:'' ,condition:'' },
-            {name: 'x' , line: 1 ,type: 'VariableDeclarator' ,value:'' ,condition:'' },
-            {name: 'N' , line: 1 ,type: 'VariableDeclarator' ,value:'' ,condition:'' },
-            {name: '' , line: 3 ,type: 'WhileStatement' ,value:null ,condition:'x<=N' },
-            {name: 'x' , line: 4 ,type: 'AssignmentExpression' ,value:'x+1' ,condition:'' },
-            {name: '' , line: 6 ,type: 'ReturnStatement' ,value:'x' ,condition:'' }] ;
-
-        let input = parseCode('function binarySearch(x, N){\n' +
-            '   \n' +
-            '    while (x<= N) {\n' +
-            '       x = x+1;\n' +
-            '    }\n' +
-            '    return x;\n' +
-            '}');
-
-        assert.deepStrictEqual( parseJson(input).toString() ,
-            arr2.toString());
+    it('function parseJson1 2', () => {
+        let sub1=parseJson1(parseCode(teststring2),inputvector2);
+        let sub2= escodegen.generate(sub1).replace(/;;/g, ';').replace(';)', ')').replace(';)', ')');
+        assert.equal(sub2.toString().replace(/\s/g, ''),res2.toString().replace(/\s/g, ''));
     });
+
+    it('function parseJson1 3', () => {
+        let sub1=parseJson1(parseCode(teststring3),inputvector3);
+        let sub2= escodegen.generate(sub1).replace(/;;/g, ';').replace(';)', ')').replace(';)', ')');
+        assert.equal(sub2.toString().replace(/\s/g, ''),res3.toString().replace(/\s/g, ''));
+    });
+
+    it('test output', () => {
+
+        let resOutput='<p><pre>'+'function foo(x, y, z) '+'{</pre></p>\n' +
+            ' <p><pre><mark class="red" id="red">     if (x + 1 + y < z) { </mark></pre></p> \n' +
+            '<p><pre>        return x + y + z + 0 + 5;</pre></p>\n' +
+            '<p><pre><mark class="green" id="green">     } else if (x + 1 + y < z * 2) { </mark></pre></p>  \n' +
+            '<p><pre>        return x + y + z + 0 + x + 5;</pre></p>\n' +
+            '<p><pre>    } else {</pre></p>\n' +
+            '<p><pre>        return x + y + z + 0 + z + 5;</pre></p>\n' +
+            '<p><pre>    }</pre></p>\n' +
+            '<p><pre>}</pre></p>\n';
+
+        let teststring4='function foo(x, y, z){\n' +
+            '    let a = x + 1;\n' +
+            '    let b = a + y;\n' +
+            '    let c = 0;\n' +
+            '    if (b < z) {\n' +
+            '        c = c + 5;\n' +
+            '        return x + y + z + c;\n' +
+            '    } else if (b < z * 2) {\n' +
+            '        c = c + x + 5;\n' +
+            '        return x + y + z + c;\n' +
+            '    } else {\n' +
+            '        c = c + z + 5;\n' +
+            '        return x + y + z + c;\n' +
+            '    }' +
+            '}';
+        let sub1=parseJson1(parseCode(teststring4),inputvector1);
+        let sub2= escodegen.generate(sub1).toString().replace(/;;/g, ';').replace(/;\)/g, ')');
+        let output=outputString(sub2.toString().replace(/\[\s+/g,'[').replace(/,\n\s+/g,',').replace(/\n\s*]/g,']'));
+
+        assert.equal(resOutput.toString().replace(/\s/g, ''),output.toString().replace(/\s/g, ''));
+
+
+    });
+
 
 
 
