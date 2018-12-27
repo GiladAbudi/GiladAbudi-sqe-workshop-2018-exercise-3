@@ -12,7 +12,25 @@ var redLineNumber=new Set();
 var greenLineNumber=new Set();
 var insidescope = false;
 var redscope=false;
-var lineNumOutScope=new Set();
+var lineNumPass = new Set();
+var upperString='';
+var lowerString='';
+let allDec='';
+let assAll=false;
+
+var nodeNum=1;
+var genAssignment=0;
+let signAssignment= 'a'+genAssignment.toString();
+var genCond=0;
+let signCond= 'c'+genCond.toString();
+var genMerge =0;
+let signMerge='m'+genMerge.toString();
+
+let updateSign =()=>{
+    signMerge='m'+genMerge.toString();
+    signCond= 'c'+genCond.toString();
+    signAssignment= 'a'+genAssignment.toString();
+};
 
 let parserSub=(left,right)=>{
     var expr =makesub(right);
@@ -71,11 +89,7 @@ let evalTest=(test)=>{
 };
 
 const parseCode = (codeToParse) => {
-    return esprima.parseScript(codeToParse,{loc:true});
-};
-
-let stringToJson=(x)=>{
-    return parseCode(x).body[0];
+    return esprima.parseScript(codeToParse,{loc:true,range:true});
 };
 
 let caseBlockStatement = (jsonBody)=>{
@@ -102,66 +116,99 @@ let caseFunctionDeclaration = (x)=>{
 };*/
 
 let caseVariableDeclaration = (x)=>{
-
+    assAll=true;
     let declaration = x.declarations;
-    for (let i = 0; i < declaration.length; i++){
+    for (let i = 0; i < declaration.length; i++) {
+        allDec+=escodegen.generate(declaration[i])+'\n';
+        if (!redscope){
+            lineNumPass.add(declaration[i].id.loc.start.line);
+        }else{
+            // upperString+=signAssignment+'=>operation: $'+escodegen.generate(x)+'$\n';
+            // lowerString+='->'+signAssignment;
+        }
         if(declaration[i].init == null){
             hashmap.set(declaration[i].id.name,0);
-            // arr.push( {name: declaration[i].id.name , line: declaration[i].id.loc.start.line ,type: declaration[i].type ,value: hashmap.get(declaration[i].id.name) ,condition:''});
-        }
-        else{
+        }else{
             parserSub(declaration[i].id.name,escodegen.generate(declaration[i].init));
-            x.declarations[i].init=stringToJson(hashmap.get(declaration[i].id.name));
-            // arr.push( {name: declaration[i].id.name , line: declaration[i].id.loc.start.line ,type: declaration[i].type ,value: hashmap.get(declaration[i].id.name) ,condition: '' });
         }
         lineNumToDelete.add(declaration[i].id.loc.start.line);
     }
 };
 
+let updateAssigment=()=>{
+    updateSign();
+    if(!redscope)
+        upperString+=signAssignment+'=>operation: ('+nodeNum.toString()+')\n' +allDec +' |approved \n';
+    else
+        upperString+=signAssignment+'=>operation: ('+nodeNum.toString()+')\n'+allDec +' \n';
+    nodeNum++;
+    lowerString+='->'+signAssignment;
+    allDec='';
+    genAssignment++;
+    assAll=false;
+};
+
 let caseExpressionStatement = (x)=>{
+    assAll=true;
     parseJson(x.expression);
 };
 
-/*let caseUpdateExpression= (x)=>{
-    let arr=[];
-    let valueRight =escodegen.generate(x);
+let caseUpdateExpression= (x)=>{
+    assAll=true;
+    updateSign();
+    allDec+=escodegen.generate(x)+'\n';
+/*
     arr.push({name: x.argument.name , line: x.loc.start.line ,type: x.type ,value:valueRight ,condition:''});
-    return arr;
-};*/
+*/
+};
 
 let caseWhileStatement = (x)=>{
+    updateSign();
     let cond = escodegen.generate(x.test);
+    lineNumPass.add(x.loc.start.line);
     let cond1 = cond;
     for (var [key, value] of hashmap) {
         cond1 =replacesub(cond1,key, value);
     }
-    /*
-    for (var [key1, value1] of hashmap)
-        subright =replacesub(subright,key1, value1);*/
-    x.test=stringToJson(cond1.toString());
-    // arr.push( {name: '' , line: x.loc.start.line ,type: x.type ,value:'' ,condition:cond1 });
+    upperString+=signMerge+'=>start: '+'('+nodeNum.toString()+')\n '+'|past\n';
+    nodeNum++;
+    upperString+=signCond+'=>condition: '+'('+nodeNum.toString()+')\n'+' '+cond+' |past\n';
+    nodeNum++;
+    lowerString+='->'+signMerge+'->'+signCond;
+    lowerString+='\n'+signCond+'(yes)';
     parseJson(x.body);
+    checkIfNeedupdateAssigment();
+    lowerString += '->' + signMerge+' \n'+signCond+'(no)';
+    genMerge++;
+    genCond++;
 };
 
 let caseIfStatement = (x)=>{
+    updateSign();
     let cond = escodegen.generate(x.test);
-    let cond1 = makesub(cond);
-    if(evalTest(cond1) && ((insidescope||flag) && !redscope)) {
-        flag=false;
+    if(evalTest(makesub(cond)) && ((insidescope||flag) && !redscope)) {
+        upperString+=signCond+'=>condition: ('+nodeNum.toString()+')\n'+cond+'|past \n'; //maybe green
+        flag=false;redscope = false;
         greenLineNumber.add(x.loc.start.line);
-        redscope = false;
     } else {
+        upperString+=signCond+'=>condition: ('+nodeNum.toString()+')\n'+cond+'|past\n';
         redLineNumber.add(x.loc.start.line);
         redscope=true;
     }
-    x.test=stringToJson(cond1.toString());
-    //arr.push( {name: '' , line: x.loc.start.line ,type: x.type ,value:'' ,condition:cond1 });
+    lowerString+='->'+signCond;
+    nodeNum++;
     checkElseIfCase(x);
+    joinToMergePoint();
+    genCond++;
 };
 
+
+
 let caseElseIf = (x)=> {
+    updateSign();
     let cond = escodegen.generate(x.test);
     let cond1 = makesub(cond);
+    makeSignFromIf(cond);
     if ( redscope || (!evalTest(cond1) || (insidescope && !flag) ) ){
         redLineNumber.add(x.loc.start.line);
         redscope = true;
@@ -170,31 +217,53 @@ let caseElseIf = (x)=> {
         redscope = false;
         flag=false;
     }
-    x.test=stringToJson(cond1);
-    //arr.push( {name: '' , line: x.loc.start.line ,type: 'elseIfStatement' ,value:'' ,condition:cond1 });
+    nodeNum++;
+    lowerString+='->'+signCond;
     checkElseIfCase(x);
+    genCond++;
+};
 
+let makeSignFromIf=(cond)=>{
+    if(!redscope&flag)
+        upperString+=signCond+'=>condition: ('+nodeNum.toString()+')\n'+cond+' |past\n';
+    else
+        upperString+=signCond+'=>condition: ('+nodeNum.toString()+')\n'+cond+'\n';
 };
 
 let checkElseIfCase =(x)=>{
-    updateMap();
-    if(!insidescope) hashmapScope=new Map(hashmap);
-    insidescope=true;
-    parseJson(x.consequent);
-    setupInsideScope();
+    extendCheckElseIfCase(x);
+    lowerString+='\n'+signCond+'(no)';
     if(x.alternate==null){
         setupInsideScope();
     }else if(x.alternate.type==='IfStatement'){
-        redscope=false;
-        insidescope=true;
+        redscope=false; insidescope=true;
+        genCond++;
         caseElseIf(x.alternate);
         hashmapScope=new Map(hashmap);
     }else {
+        //  if(!redscope )
+        redscope=!redscope;
         insidescope=true;
-        parseJson(x.alternate);
-        setupInsideScope();
+        parseJson(x.alternate); setupInsideScope();
+        checkIfNeedupdateAssigment();
     }
     redscope=false;
+};
+
+let extendCheckElseIfCase=(x)=>{
+    updateSign();
+    updateMap();
+    if(!insidescope) hashmapScope=new Map(hashmap);
+    insidescope=true;
+    lowerString+='\n'+signCond+'(yes)';
+    parseJson(x.consequent);
+    checkIfNeedupdateAssigment();
+    setupInsideScope();
+};
+
+let checkIfNeedupdateAssigment=()=>{
+    if(assAll)
+        updateAssigment();
 };
 
 let updateMap=()=>{
@@ -219,32 +288,40 @@ let setupInsideScope=()=>{
 };*/
 
 let caseReturnStatement = (x)=>{
-    let val = escodegen.generate(x.argument);
+    lineNumPass.add(x.loc.start.line);
+    upperString+='r=>operation: ('+nodeNum.toString()+')\n'+escodegen.generate(x).toString().replace(';','')+' |approved \n';
+    lowerString+='->'+'r';
+    nodeNum++;
+
+    /*let val = escodegen.generate(x.argument);
     let val1 = makesub(val.toString());
-    /*parser.Parser.parse(val);
+    parser.Parser.parse(val);
     for (var [key, value] of hashmap) {
         val1 =val1.substitute(key, value);
     }
-    val1=val1.toString().substring(1,val1.toString().length-1);*/
+    val1=val1.toString().substring(1,val1.toString().length-1);
     x.argument=stringToJson(val1);
-    // arr.push({name: '' , line: x.loc.start.line ,type: x.type ,value:val1 ,condition:'' });
+    arr.push({name: '' , line: x.loc.start.line ,type: x.type ,value:val1 ,condition:'' });*/
 };
 
 let caseAssignmentExpression =(x)=>{
+    assAll=true;
+    updateSign();
     let valueRight = escodegen.generate(x.right);
     let name = escodegen.generate(x.left);
+    allDec+=escodegen.generate(x)+'\n';
     if(hashmap.has(name)){
         parserSub(name,valueRight);
-        x.right=stringToJson(hashmap.get(name));
+        //x.right=stringToJson(hashmap.get(name));
         lineNumToDelete.add(x.loc.start.line);
     }else {
-        if(checkIfArray(name))
-            hashmapArgs[getNameofArray(name).toString()][getNumberInArray(name)]=valueRight;
-        else {
-            x.right = stringToJson(makesub(valueRight).toString());
+        if(checkIfArray(name)) {
+            hashmapArgs[getNameofArray(name).toString()][getNumberInArray(name)] = valueRight;
+        }else {
             hashmapArgs[name]=valueRight;
         }
     }
+    //genAssignment++;
     // arr.push( {name: name , line: x.loc.start.line ,type: x.type ,value:hashmap.get(name) ,condition:'' });
 };
 
@@ -265,18 +342,29 @@ let getNumberInArray=(x)=>{
 
 
 let caseProgram = (x)=>{
+    upperString+='st=>start: Start \n';
+    lowerString+='st';
+    for (let i=0 ; i<x.body.length ; i++)
+        parseJson(x.body[i]);
+};
+
+/*let caseProgram1 = (x)=>{
     let arr=[];
     let funcindex =0;
+    upperString+='st=>start: Start \n';
+    lowerString+='st';
     for (let i=0 ; i<x.body.length ; i++)
-        if(x.body[i].type==='FunctionDeclaration')
-            funcindex=i;
-        else {
+        if(x.body[i].type==='FunctionDeclaration') {
+            funcindex = i;
+        }else {
             arr = arr.concat(parseJson(x.body[i]));
             lineNumOutScope.add(x.body[i].declarations[0].id.loc.start.line);
+            lineNumPass.add(x.body[i].declarations[0].id.loc.start.line);
         }
+
     arr= arr.concat(parseJson(x.body[funcindex]));
     return arr;
-};
+};*/
 
 
 
@@ -290,8 +378,8 @@ let ParseFunction = {
     ReturnStatement:caseReturnStatement,
     //   ForStatement:caseForStatement,
     Program:caseProgram,
-    AssignmentExpression:caseAssignmentExpression
-    // UpdateExpression:caseUpdateExpression
+    AssignmentExpression:caseAssignmentExpression,
+    UpdateExpression:caseUpdateExpression
 };
 
 let parseJson1 =(parsedCode,vectorInput)=>{
@@ -299,12 +387,14 @@ let parseJson1 =(parsedCode,vectorInput)=>{
     newjsonobj=new Object(parsedCode);
     inputToMap(vectorInput);
     parseJson(newjsonobj);
-    return newjsonobj;
+    let fullString= upperString +'\n'+ lowerString;
+    return fullString;
 };
 
 
 
 let setupVar=()=>{
+    lineNumPass=new Set();
     hashmapArgs=null ;
     hashmap = new Map();
     hashmapScope = new Map();
@@ -314,6 +404,27 @@ let setupVar=()=>{
     redLineNumber=new Set();
     greenLineNumber=new Set();
     insidescope = false;
+    upperString='';
+    lowerString='';
+    genMerge =0;
+    genCond=0;
+    genAssignment=0;
+    nodeNum=1;
+    assAll=false;
+};
+
+let joinToMergePoint=()=>{
+    let arr = lowerString.split('\n');
+    let flag=true;
+    for (let i = arr.length-1; (i <arr.length) && flag; i--) {
+        if(arr[i].toString().charAt(0)=='c')
+            arr[i]=arr[i].toString()+'->'+signMerge;
+        else flag=false;
+    }
+    upperString+=signMerge+'=>start: '+'('+nodeNum.toString()+')'+' |approved \n';
+    genMerge++;
+    nodeNum++;
+    lowerString=arr.join('\n');
 };
 
 let inputToMap=(input)=>{
@@ -321,21 +432,42 @@ let inputToMap=(input)=>{
     return hashmapArgs;
 };
 
-let parseJson =(data)=>{return ParseFunction[(data.type)](data);};
+let parseJson =(data)=>{
+    if(checkTypeAssignment(data) && data.type!=='UpdateExpression'&& assAll)
+        updateAssigment();
+    return ParseFunction[(data.type)](data);
+};
 
-let outputString =(str)=>{
+let checkTypeAssignment=(data)=>{
+    return (data.type!=='VariableDeclaration' && data.type!=='ExpressionStatement' && data.type!=='AssignmentExpression');
+};
+
+/*let outputString =(str)=>{
     let arr=str.split('\n');
     let newstr='';
     lineNumOutScope.forEach((value => {lineNumToDelete.delete(value);}));
     for(let i =0;i<arr.length ; i++)
-        if(!lineNumToDelete.has(i+1))
-            if( greenLineNumber.has(i+1))
-                newstr+= '<p><pre><mark class="green" id="green"> '+arr[i]+' </mark></pre></p>  '+'\n';
-            else if (redLineNumber.has(1+i))
-                newstr+=' <p><pre><mark class="red" id="red"> '+ arr[i]+' </mark></pre></p> '+'\n';
-            else
-                newstr+= '<p><pre>' + arr[i]+'</pre></p>'+'\n';
+        /!*if(!lineNumToDelete.has(i+1))*!/
+        if( greenLineNumber.has(i+1) || lineNumPass.has(i+1))
+            newstr+= '<p><pre><mark class="green" id="green"> '+arr[i]+' </mark></pre></p>  '+'\n';
+        else if (redLineNumber.has(1+i))
+            newstr+=' <p><pre><mark class="red" id="red"> '+ arr[i]+' </mark></pre></p> '+'\n';
+        else
+            newstr+= '<p><pre>' + arr[i]+'</pre></p>'+'\n';
     return newstr;
-};
+};*/
 
-export {parseJson1,checkIfArray,getNumberInArray,getNameofArray,inputToMap,evalTest,outputString,parseCode,parseJson,caseBlockStatement,caseFunctionDeclaration,caseWhileStatement,caseIfStatement,caseAssignmentExpression,caseReturnStatement};
+/*
+let colorNode=(bbb)=>{
+    let c=new Set();
+    mapNameColor.forEach((value) =>c.add(value.replace(';','').replace(/\s+/g,'')));
+    bbb.applyShapeStyles( shape => shape.getNodePathId()!=-1 , { fillColor: '#ffffff'});
+    bbb.applyShapeStyles( shape => shape.getName().toString().includes('function') , { fillColor: '#4aff3c' });
+    bbb.applyShapeStyles( shape => shape.getNodeType().includes('Program'), { fillColor: '#4aff3c' });
+    bbb.applyShapeStyles( shape => c.has(shape.getName().replace(/\s+/g,'')) , { fillColor: '#4aff3c' });
+    return bbb.print();
+};
+*/
+
+
+export {parseJson1,checkIfArray,getNumberInArray,getNameofArray,inputToMap,evalTest,parseCode,parseJson,caseBlockStatement,caseFunctionDeclaration,caseWhileStatement,caseIfStatement,caseAssignmentExpression,caseReturnStatement};

@@ -22,9 +22,12 @@
     "license": "ISC",
     "dependencies": {
         "escodegen": "^1.11.0",
+        "esgraph": "^0.3.0",
         "esprima": "^4.0.0",
         "expr-eval": "^1.2.2",
-        "jquery": "^3.3.1"
+        "flowchart.js": "^1.11.3",
+        "jquery": "^3.3.1",
+        "js2flowchart": "^1.1.7"
     },
     "devDependencies": {
         "cross-env": "^5.2.0",
